@@ -224,7 +224,7 @@
         <div class="regle-texte">
           Avant d'additionner deux fractions, elles doivent avoir le <strong style="color:#d4820a;">même dénominateur</strong>.<br><br>
           Un nombre est <strong style="color:#d4820a;">multiple</strong> d'un autre quand il est dans sa table de multiplication. Par exemple, 4 est dans la table de 2 (2×2=4), donc 4 est un multiple de 2.<br><br>
-          Quand c'est le cas, on n'a besoin de modifier qu'<strong style="color:#d4820a;">une seule</strong> fraction : celle qui a le plus petit dénominateur. On la réécrit avec le plus grand dénominateur.
+          Quand c'est le cas, on n'a besoin de modifier qu'<strong style="color:#d4820a;">une seule</strong> fraction : celle qui a le plus petit dénominateur. On la réécrit avec le plus grand dénominateur.<br><br>C'est <strong style="color:#d4820a;">exactement pareil pour une soustraction</strong> : on suit les mêmes étapes, puis on soustrait les numérateurs.
         </div>
       </div>
 
@@ -284,14 +284,14 @@
     <div class="cours-carte">
       <div style="width:100%;margin-bottom:24px;">
         <div class="cours-prog-header">
-          <div class="cours-prog-badge" id="cours-badge">Addition 1 / 6</div>
-          <div class="cours-prog-num">Dénominateur commun (1)</div>
+          <div class="cours-prog-badge" id="cours-badge">Exercice 1 / 6</div>
+          <div class="cours-prog-num" id="cours-type">Dénominateur commun (1)</div>
         </div>
         <div class="cours-prog-track"><div class="cours-prog-fill" id="cours-fill"></div></div>
       </div>
       <div class="add-display">
         <div class="fa"><div class="fa-n" id="fa-n1">1</div><div class="fa-b"></div><div class="fa-d" id="fa-d1">2</div></div>
-        <div class="add-op">+</div>
+        <div class="add-op" id="add-signe-ex">+</div>
         <div class="fa"><div class="fa-n" id="fa-n2">1</div><div class="fa-b"></div><div class="fa-d" id="fa-d2">4</div></div>
       </div>
       <div class="questions" id="questions"></div>
@@ -312,16 +312,20 @@
   <div class="ecran fond-vert cache" id="ecran-quiz-final">
     <div class="quiz-carte">
       <div class="prog-wrap">
-        <div class="prog-label" id="prog-label-f">Addition 1 / 6</div>
+        <div class="prog-label" id="prog-label-f">Exercice 1 / 6</div>
         <div class="prog-track"><div class="prog-fill" id="prog-fill-f"></div></div>
       </div>
       <div class="consigne-f">Calcule le <span style="color:var(--vert-bord);font-weight:700;">résultat</span> :</div>
-      <div class="add-quiz" id="add-quiz-f"></div>
-      <div class="quiz-champ-wrap">
-        <input type="text" class="quiz-champ" id="quiz-champ" placeholder="ex: 3/4" />
-        <div class="quiz-hint">Utilise <strong>/</strong> pour la barre de fraction</div>
-        <button class="quiz-btn-val" onclick="repondreFinal()">Valider</button>
+      <div style="display:flex;align-items:center;gap:14px;justify-content:center;flex-wrap:wrap;margin:8px 0;">
+        <div id="add-quiz-f" style="display:flex;align-items:center;gap:14px;"></div>
+        <div style="font-size:34px;font-weight:700;color:var(--vert-bord);">=</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <input type="number" id="quiz-rn" style="width:80px;height:54px;border:2px solid rgba(10,110,63,0.3);border-radius:12px;background:rgba(255,255,255,0.8);font-size:26px;font-weight:700;color:var(--texte-fonce);text-align:center;outline:none;font-family:inherit;" />
+          <div style="width:80px;height:3px;background:var(--texte-fonce);border-radius:2px;"></div>
+          <input type="number" id="quiz-rd" style="width:80px;height:54px;border:2px solid rgba(10,110,63,0.3);border-radius:12px;background:rgba(255,255,255,0.8);font-size:26px;font-weight:700;color:var(--texte-fonce);text-align:center;outline:none;font-family:inherit;" disabled />
+        </div>
       </div>
+      <button class="quiz-btn-val" onclick="repondreFinal()">Valider</button>
       <div class="feedback" id="feedback-f"></div>
     </div>
   </div>
@@ -404,16 +408,18 @@
 
     async function verifierProgression() {
       if (!email) { allerVers('ecran-chargement','ecran-accueil'); return; }
+      const timeout = setTimeout(() => allerVers('ecran-chargement','ecran-accueil'), 8000);
       try {
         const res = await fetch(APPS_SCRIPT_URL + '?type=remediation&etablissement=' + encodeURIComponent(lycee));
         const data = await res.json();
+        clearTimeout(timeout);
         if (data.status !== 'ok') { allerVers('ecran-chargement','ecran-accueil'); return; }
         const lignes = (data.data||[]).filter(r => r.eleve_id===email && r.fiche_id===FICHE_ID);
         nbTentatives = lignes.filter(r => ['quiz_final_echec','quiz_final_valide','echec_3_tentatives'].includes(r.statut)).length;
         if (lignes.find(r => r.statut==='echec_3_tentatives')) { allerVers('ecran-chargement','ecran-bloque'); return; }
         if (lignes.find(r => r.statut==='quiz_final_valide'))  { allerVers('ecran-chargement','ecran-final-ok'); return; }
         allerVers('ecran-chargement','ecran-accueil');
-      } catch(e) { allerVers('ecran-chargement','ecran-accueil'); }
+      } catch(e) { clearTimeout(timeout); allerVers('ecran-chargement','ecran-accueil'); }
     }
     verifierProgression();
 
@@ -527,13 +533,14 @@
     }
 
     // ─── DONNÉES ───────────────────────────────────────────────
+    // signe: '+' ou '-', rn/rd = numérateur/dénominateur du résultat
     const ADDITIONS = [
-      { n1:1, d1:2,  n2:1, d2:4,  dc:4,  n1c:2, res:'3/4'  },
-      { n1:1, d1:3,  n2:1, d2:6,  dc:6,  n1c:2, res:'3/6'  },
-      { n1:1, d1:2,  n2:3, d2:8,  dc:8,  n1c:4, res:'7/8'  },
-      { n1:2, d1:3,  n2:1, d2:9,  dc:9,  n1c:6, res:'7/9'  },
-      { n1:1, d1:4,  n2:3, d2:8,  dc:8,  n1c:2, res:'5/8'  },
-      { n1:1, d1:5,  n2:3, d2:10, dc:10, n1c:2, res:'5/10' },
+      { n1:1, d1:2,  n2:1, d2:4,  dc:4,  n1c:2, signe:'+', rn:3,  rd:4  },
+      { n1:1, d1:3,  n2:1, d2:6,  dc:6,  n1c:2, signe:'+', rn:3,  rd:6  },
+      { n1:3, d1:4,  n2:1, d2:8,  dc:8,  n1c:6, signe:'-', rn:5,  rd:8  },
+      { n1:2, d1:3,  n2:1, d2:9,  dc:9,  n1c:6, signe:'+', rn:7,  rd:9  },
+      { n1:7, d1:9,  n2:2, d2:3,  dc:9,  n1c:7, signe:'-', rn:1,  rd:9  },
+      { n1:1, d1:5,  n2:3, d2:10, dc:10, n1c:2, signe:'+', rn:5,  rd:10 },
     ];
     const ORDRE_FINAL = [2,4,0,5,1,3];
 
@@ -549,6 +556,9 @@
       document.getElementById('fa-d1').textContent = a.d1;
       document.getElementById('fa-n2').textContent = a.n2;
       document.getElementById('fa-d2').textContent = a.d2;
+      const signeEl = document.getElementById('add-signe-ex');
+      if (signeEl) signeEl.textContent = a.signe;
+      document.getElementById('cours-badge').textContent = 'Exercice ' + (ai+1) + ' / ' + ADDITIONS.length;
       document.getElementById('questions').innerHTML = '';
       ajouterQ1(a);
     }
@@ -702,7 +712,7 @@
       // Construire l'addition avec fractions visuelles et champs résultat
       b.innerHTML = `
         <div class="q-lbl">Question 3</div>
-        <div class="q-txt">Additionne maintenant les deux fractions :</div>
+        <div class="q-txt" id="q3-consigne">Calcule maintenant le résultat :</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:16px 0;flex-wrap:wrap;">
           <!-- Fraction 1 transformée -->
           <div style="display:inline-flex;flex-direction:column;align-items:center;gap:5px;">
@@ -710,7 +720,7 @@
             <div style="width:64px;height:3px;background:#0a6e3f;border-radius:2px;"></div>
             <div style="font-size:42px;font-weight:700;color:#0a6e3f;line-height:1;padding:4px 8px;">${a.dc}</div>
           </div>
-          <div style="font-size:32px;font-weight:700;color:#b06a20;">+</div>
+          <div style="font-size:32px;font-weight:700;color:#b06a20;" id="q3-signe">+</div>
           <!-- Fraction 2 -->
           <div style="display:inline-flex;flex-direction:column;align-items:center;gap:5px;">
             <div style="font-size:42px;font-weight:700;color:#0a6e3f;line-height:1;padding:4px 8px;">${a.n2}</div>
@@ -727,14 +737,18 @@
         </div>
         <div style="font-size:13px;color:#0a6e3f;text-align:center;margin-bottom:10px;">👇 Commence par le numérateur</div>
         <div class="champ-wrap">
-          <button class="btn-val" id="q3-btn" onclick="valQ3Num(${a.n1c + a.n2},${a.dc})">Valider le numérateur</button>
+          <button class="btn-val" id="q3-btn" onclick="valQ3Num(ADDITIONS[addIdx].signe==='+' ? ADDITIONS[addIdx].n1c+ADDITIONS[addIdx].n2 : ADDITIONS[addIdx].n1c-ADDITIONS[addIdx].n2, ADDITIONS[addIdx].dc)">Valider le numérateur</button>
         </div>
         <div class="fb-inline" id="fb3"></div>
       `;
       z.appendChild(b);
       b.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      // Mettre à jour le signe selon l'opération
+      const q3signeEl = document.getElementById('q3-signe');
+      if (q3signeEl) q3signeEl.textContent = a.signe;
+      const numRes = a.signe === '+' ? a.n1c + a.n2 : a.n1c - a.n2;
       setTimeout(() => { const el = document.getElementById('q3-rnum'); if(el) el.focus(); }, 300);
-      document.getElementById('q3-rnum').addEventListener('keydown', e => { if(e.key==='Enter') valQ3Num(a.n1c + a.n2, a.dc); });
+      document.getElementById('q3-rnum').addEventListener('keydown', e => { if(e.key==='Enter') valQ3Num(numRes, a.dc); });
     }
 
     function valQ3Num(numRes, dc) {
@@ -809,51 +823,63 @@
     function chargerQF(i) {
       bloqueF = false;
       const a = ADDITIONS[ORDRE_FINAL[i]];
-      document.getElementById('prog-label-f').textContent = 'Addition ' + (i+1) + ' / ' + ADDITIONS.length;
+      document.getElementById('prog-label-f').textContent = 'Exercice ' + (i+1) + ' / ' + ADDITIONS.length;
       document.getElementById('prog-fill-f').style.width = (i / ADDITIONS.length * 100) + '%';
       document.getElementById('feedback-f').className = 'feedback';
       document.getElementById('feedback-f').innerHTML = '';
-      document.getElementById('quiz-champ').value = '';
-      document.getElementById('add-quiz-f').innerHTML = `
-        <div class="fq"><div class="fq-n">${a.n1}</div><div class="fq-b"></div><div class="fq-d">${a.d1}</div></div>
-        <div class="op-q">+</div>
-        <div class="fq"><div class="fq-n">${a.n2}</div><div class="fq-b"></div><div class="fq-d">${a.d2}</div></div>
-        <div class="op-q">=</div>
-        <div class="op-q" style="font-size:40px;color:var(--texte-fonce);">?</div>
-      `;
-      setTimeout(() => document.getElementById('quiz-champ').focus(), 200);
+      const rn = document.getElementById('quiz-rn');
+      const rd = document.getElementById('quiz-rd');
+      rn.value=''; rn.disabled=false; rn.style.borderColor='rgba(10,110,63,0.3)'; rn.style.background='rgba(255,255,255,0.8)';
+      rd.value=''; rd.disabled=true;  rd.style.borderColor='rgba(10,110,63,0.3)'; rd.style.background='rgba(255,255,255,0.8)';
+      document.getElementById('add-quiz-f').innerHTML =
+        '<div class="fq"><div class="fq-n">' + a.n1 + '</div><div class="fq-b"></div><div class="fq-d">' + a.d1 + '</div></div>' +
+        '<div class="op-q">' + a.signe + '</div>' +
+        '<div class="fq"><div class="fq-n">' + a.n2 + '</div><div class="fq-b"></div><div class="fq-d">' + a.d2 + '</div></div>';
+      setTimeout(() => rn.focus(), 200);
+      rn.onkeydown = ev => { if(ev.key==='Enter') repondreFinal(); };
+      rd.onkeydown = ev => { if(ev.key==='Enter') repondreFinal(); };
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('quiz-champ').addEventListener('keydown', e => { if(e.key==='Enter') repondreFinal(); });
-    });
+    document.addEventListener('DOMContentLoaded', () => {});
 
     function repondreFinal() {
       if (bloqueF) return;
-      const val = document.getElementById('quiz-champ').value.trim().replace(/\s/g,'');
-      if (!val) return;
-      bloqueF = true;
       const a = ADDITIONS[ORDRE_FINAL[qFIdx]];
-      const ok = val === a.res;
+      const rnEl = document.getElementById('quiz-rn');
+      const rdEl = document.getElementById('quiz-rd');
       const fb = document.getElementById('feedback-f');
-      if (!ok) {
-        fb.textContent = '✗ Non, le résultat est ' + a.res + '.';
-        fb.className = 'feedback nok';
-        bloqueF = false;
-        document.getElementById('quiz-champ').value = '';
-        document.getElementById('quiz-champ').focus();
+
+      if (!rnEl.disabled && rdEl.disabled) {
+        const vn = parseInt(rnEl.value);
+        if (isNaN(vn)) return;
+        if (vn !== a.rn) {
+          fb.textContent = '✗ Non, le numérateur est ' + a.rn + '.';
+          fb.className = 'feedback nok'; rnEl.value=''; rnEl.focus(); return;
+        }
+        rnEl.disabled=true; rnEl.style.borderColor='rgba(10,110,63,0.5)'; rnEl.style.background='rgba(16,140,90,0.07)';
+        rdEl.disabled=false; rdEl.style.borderColor='rgba(10,110,63,0.3)';
+        fb.textContent = '✓ Exact ! Maintenant le dénominateur.'; fb.className = 'feedback ok';
+        setTimeout(() => { rdEl.focus(); fb.className='feedback'; fb.innerHTML=''; }, TOK());
         return;
       }
+
+      const vd = parseInt(rdEl.value);
+      if (isNaN(vd)) return;
+      bloqueF = true;
+      if (vd !== a.rd) {
+        fb.textContent = '✗ Non, le dénominateur est ' + a.rd + '.';
+        fb.className = 'feedback nok'; bloqueF=false; rdEl.value=''; rdEl.focus(); return;
+      }
+      rdEl.disabled=true; rdEl.style.borderColor='rgba(10,110,63,0.5)'; rdEl.style.background='rgba(16,140,90,0.07)';
       bonnesF++;
-      fb.textContent = '✓ Bonne réponse !';
-      fb.className = 'feedback ok';
+      fb.textContent = '✓ Bravo !'; fb.className = 'feedback ok';
       setTimeout(() => {
         qFIdx++;
         if (qFIdx >= ADDITIONS.length) finalResultat();
         else {
           const z = document.getElementById('add-quiz-f');
-          z.style.opacity = '0'; z.style.transition = 'opacity 0.3s';
-          setTimeout(() => { chargerQF(qFIdx); z.style.opacity = '1'; }, 300);
+          z.style.opacity='0'; z.style.transition='opacity 0.3s';
+          setTimeout(() => { chargerQF(qFIdx); z.style.opacity='1'; bloqueF=false; }, 300);
         }
       }, TOK());
     }
